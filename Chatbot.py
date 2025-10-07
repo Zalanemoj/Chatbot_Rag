@@ -86,7 +86,7 @@ else:
 
                     # 4. Initialize the Groq LLM
                     # FIX: Changed model to gemma-7b-it for broader compatibility
-                    llm = ChatGroq(groq_api_key=groq_api_key, model="gemma-7b-it", temperature=0)
+                    llm = ChatGroq(groq_api_key=groq_api_key, model="llama-3.1-8b-instant", temperature=0)
 
                     # 5. Create the RAG chain
                     # This prompt rewrites the user's question to be a standalone question
