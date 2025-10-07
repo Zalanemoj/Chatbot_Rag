@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 from langchain_groq import ChatGroq
-from langchain.chains import create_retrieval_chain
+from langchain.chains import create_retrieval_chain, create_history_aware_retriever
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_chroma import Chroma
 from langchain_community.document_loaders import PyPDFLoader
@@ -118,8 +118,13 @@ else:
                     # Create a chain that stuffs the documents into the prompt
                     question_answer_chain = create_stuff_documents_chain(llm, qa_prompt)
                     
-                    # Create a chain that handles history and retrieves documents
-                    rag_chain = create_retrieval_chain(retriever, question_answer_chain)
+                    # Create a history-aware retriever
+                    history_aware_retriever = create_history_aware_retriever(
+                        llm, retriever, contextualize_q_prompt
+                    )
+                    
+                    # Create the final retrieval chain that combines the retriever and the QA chain
+                    rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
 
                     # Wrap the chain to make it stateful and remember conversation history
                     st.session_state.conversational_rag_chain = RunnableWithMessageHistory(
@@ -157,5 +162,17 @@ else:
                 # Display the AI's response
                 with st.chat_message("ai"):
                     st.markdown(response["answer"])
+                    
+                    # NEW: Display source documents in an expander
+                    with st.expander("View Sources"):
+                        st.markdown("---")
+                        for doc in response["context"]:
+                            source_name = os.path.basename(doc.metadata.get("source", "Unknown"))
+                            page_number = doc.metadata.get("page", 1)
+                            st.markdown(f"**Source:** `{source_name}`, **Page:** `{page_number}`")
+                            st.markdown(f"> {doc.page_content.strip()}")
+                            st.markdown("---")
+
     else:
         st.info("Please upload and process your PDF documents to start chatting.")
+
