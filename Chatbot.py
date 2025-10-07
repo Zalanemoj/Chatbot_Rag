@@ -11,6 +11,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.chat_history import BaseChatMessageHistory
+from groq import BadRequestError
 
 # --- SESSION STATE MANAGEMENT ---
 # Initialize session state variables if they don't exist.
@@ -84,7 +85,8 @@ else:
                     retriever = vector_store.as_retriever()
 
                     # 4. Initialize the Groq LLM
-                    llm = ChatGroq(groq_api_key=groq_api_key, model="llama3-8b-8192", temperature=0)
+                    # FIX: Changed model to gemma-7b-it for broader compatibility
+                    llm = ChatGroq(groq_api_key=groq_api_key, model="gemma-7b-it", temperature=0)
 
                     # 5. Create the RAG chain
                     # This prompt rewrites the user's question to be a standalone question
@@ -153,25 +155,32 @@ else:
                 st.markdown(prompt)
             
             with st.spinner("Thinking..."):
-                # Invoke the conversational RAG chain
-                response = st.session_state.conversational_rag_chain.invoke(
-                    {"input": prompt},
-                    config={"configurable": {"session_id": session_id}},
-                )
-                
-                # Display the AI's response
-                with st.chat_message("ai"):
-                    st.markdown(response["answer"])
+                try:
+                    # Invoke the conversational RAG chain
+                    response = st.session_state.conversational_rag_chain.invoke(
+                        {"input": prompt},
+                        config={"configurable": {"session_id": session_id}},
+                    )
                     
-                    # NEW: Display source documents in an expander
-                    with st.expander("View Sources"):
-                        st.markdown("---")
-                        for doc in response["context"]:
-                            source_name = os.path.basename(doc.metadata.get("source", "Unknown"))
-                            page_number = doc.metadata.get("page", 1)
-                            st.markdown(f"**Source:** `{source_name}`, **Page:** `{page_number}`")
-                            st.markdown(f"> {doc.page_content.strip()}")
+                    # Display the AI's response
+                    with st.chat_message("ai"):
+                        st.markdown(response["answer"])
+                        
+                        # NEW: Display source documents in an expander
+                        with st.expander("View Sources"):
                             st.markdown("---")
+                            for doc in response["context"]:
+                                source_name = os.path.basename(doc.metadata.get("source", "Unknown"))
+                                page_number = doc.metadata.get("page", 1)
+                                st.markdown(f"**Source:** `{source_name}`, **Page:** `{page_number}`")
+                                st.markdown(f"> {doc.page_content.strip()}")
+                                st.markdown("---")
+
+                except BadRequestError as e:
+                    st.error(f"An API error occurred: {e}. Please check your API key and ensure it has access to the selected model.")
+                except Exception as e:
+                    st.error(f"An unexpected error occurred: {e}")
+
 
     else:
         st.info("Please upload and process your PDF documents to start chatting.")
