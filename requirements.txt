@@ -9,4 +9,3 @@ langchain-text-splitters
 pypdf
 sentence-transformers
 chromadb
-custom_st
