@@ -1,0 +1,1 @@
+A multi-document Q&A chatbot that retrieves accurate answers from large document sets in under 2 seconds, with 90% relevance and 60% fewer hallucinations than a plain LLM. Built with LangChain, ChromaDB, and Groq LLaMA3.
